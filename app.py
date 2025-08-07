@@ -27,6 +27,24 @@ CREDENTIALS = {
     'user': _hash_password('password123'),
 }
 
+# Helper to rerun the Streamlit app in a version‑agnostic way.
+# Newer versions expose `st.rerun()` while older versions still have
+# `st.experimental_rerun()`. This function attempts to call the
+# experimental API first, and falls back to the stable API if
+# necessary. If neither exists, it does nothing.
+def _safe_rerun() -> None:
+    """Attempt to rerun the Streamlit script, regardless of version."""
+    # Try the experimental API first
+    try:
+        st.experimental_rerun()  # type: ignore[attr-defined]
+    except AttributeError:
+        # Fall back to the stable API in newer Streamlit versions
+        try:
+            st.rerun()  # type: ignore[attr-defined]
+        except AttributeError:
+            # As a last resort do nothing; the user can manually refresh
+            pass
+
 def require_login():
     """
     Show a login form in the sidebar and verify credentials.  If the
@@ -40,9 +58,10 @@ def require_login():
     if st.session_state['authenticated']:
         # authenticated user: show logout option
         with st.sidebar.expander('Account', expanded=True):
-            if st.button('Logout'):
+        if st.button('Logout'):
                 st.session_state['authenticated'] = False
-                st.experimental_rerun()
+                # Re-run the app to force a refresh and show the login form again
+                _safe_rerun()
         return True
 
     # login prompt
@@ -54,7 +73,8 @@ def require_login():
         if login_clicked:
             if username in CREDENTIALS and _hash_password(password) == CREDENTIALS[username]:
                 st.session_state['authenticated'] = True
-                st.experimental_rerun()
+                # On successful login trigger a rerun so the main dashboard can load
+                _safe_rerun()
             else:
                 st.error('Invalid username or password')
     return st.session_state['authenticated']
