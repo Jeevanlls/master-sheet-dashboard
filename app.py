@@ -9,6 +9,56 @@ import hashlib
 from datetime import datetime
 from sqlalchemy import create_engine
 
+# ======================
+# AUTHENTICATION
+# ======================
+# Define and check login credentials.  Credentials are stored as
+# username: hashed password pairs for simplicity.  To add more users,
+# extend this dictionary.  In a real application you might want to
+# integrate with an external auth provider or store hashed passwords
+# securely.
+import hashlib
+
+def _hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+CREDENTIALS = {
+    'admin': _hash_password('admin'),
+    'user': _hash_password('password123'),
+}
+
+def require_login():
+    """
+    Show a login form in the sidebar and verify credentials.  If the
+    user is already authenticated, optionally provide a logout button.
+    Returns True when the user is authenticated and False otherwise.
+    """
+    # initialise session state
+    if 'authenticated' not in st.session_state:
+        st.session_state['authenticated'] = False
+
+    if st.session_state['authenticated']:
+        # authenticated user: show logout option
+        with st.sidebar.expander('Account', expanded=True):
+            if st.button('Logout'):
+                st.session_state['authenticated'] = False
+                st.experimental_rerun()
+        return True
+
+    # login prompt
+    with st.sidebar.expander('Login', expanded=True):
+        st.write('### Please log in to continue')
+        username = st.text_input('Username')
+        password = st.text_input('Password', type='password')
+        login_clicked = st.button('Login')
+        if login_clicked:
+            if username in CREDENTIALS and _hash_password(password) == CREDENTIALS[username]:
+                st.session_state['authenticated'] = True
+                st.experimental_rerun()
+            else:
+                st.error('Invalid username or password')
+    return st.session_state['authenticated']
+
 """
 This APP is an updated version : 5.0 @ 06-8-2025 Time 22:48 Created by: Jeevan Ratnam
 This app provides a dashboard for managing eBay and Prime transaction data,generating a master sheet, and summarizing owner payouts. It includes features
@@ -26,6 +76,11 @@ st.set_page_config(
     page_icon=LOGO_FILE,
     layout="wide"
 )
+
+# Require user to log in before using the dashboard
+if not require_login():
+    st.stop()
+
 
 # ======================
 # DATABASE INITIALIZATION
