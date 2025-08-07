@@ -58,7 +58,7 @@ def require_login():
     if st.session_state['authenticated']:
         # authenticated user: show logout option
         with st.sidebar.expander('Account', expanded=True):
-        if st.button('Logout'):
+            if st.button('Logout'):
                 st.session_state['authenticated'] = False
                 # Re-run the app to force a refresh and show the login form again
                 _safe_rerun()
